@@ -12,11 +12,20 @@ import VirtualWardrobe from './components/wardrobe/VirtualWardrobe';
 import { useAuthStore } from './store/authStore';
 
 function App() {
-  const { initializeAuth } = useAuthStore();
+  const { initializeAuth, isLoading } = useAuthStore();
 
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
+
+  // Show loading spinner while initializing auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
 
   return (
     <Router>

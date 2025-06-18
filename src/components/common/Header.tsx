@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, User, Search, Menu, X, Leaf, Moon, Sun, Heart, Shirt } from 'lucide-react';
+import { ShoppingBag, User, Search, Menu, X, Leaf, Moon, Sun, Heart, Shirt, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
@@ -14,6 +14,7 @@ const Header: React.FC = () => {
   const { items: wishlistItems } = useWishlistStore();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -29,6 +30,16 @@ const Header: React.FC = () => {
   ];
 
   const isDarkMode = user?.preferences?.darkMode || false;
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setIsUserMenuOpen(false);
+      setIsMobileMenuOpen(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const logoVariants = {
     animate: {
@@ -280,31 +291,57 @@ const Header: React.FC = () => {
 
             {/* User Menu */}
             {isAuthenticated ? (
-              <motion.div 
-                className="flex items-center space-x-2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <motion.span 
-                  className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
-                  whileHover={{ scale: 1.05 }}
-                >
-                  Hi, {user?.name?.split(' ')[0]}
-                </motion.span>
+              <div className="relative">
                 <motion.button
-                  onClick={logout}
-                  className={`text-sm transition-colors ${
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
                     isDarkMode 
-                      ? 'text-gray-400 hover:text-gray-200' 
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'text-gray-300 hover:bg-gray-800' 
+                      : 'text-gray-700 hover:bg-gray-100'
                   }`}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  Logout
+                  <User className="h-5 w-5" />
+                  <span className="text-sm font-medium hidden sm:block">
+                    {user?.name?.split(' ')[0] || 'User'}
+                  </span>
                 </motion.button>
-              </motion.div>
+
+                <AnimatePresence>
+                  {isUserMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg border ${
+                        isDarkMode 
+                          ? 'bg-gray-800 border-gray-700' 
+                          : 'bg-white border-gray-200'
+                      }`}
+                    >
+                      <div className="py-1">
+                        <div className={`px-4 py-2 text-sm border-b ${
+                          isDarkMode ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-600'
+                        }`}>
+                          {user?.email}
+                        </div>
+                        <button
+                          onClick={handleLogout}
+                          className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center space-x-2 ${
+                            isDarkMode 
+                              ? 'text-gray-300 hover:bg-gray-700' 
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             ) : (
               <motion.button
                 onClick={() => setIsAuthModalOpen(true)}
@@ -405,6 +442,27 @@ const Header: React.FC = () => {
                     </Link>
                   </motion.div>
                 ))}
+                
+                {isAuthenticated && (
+                  <motion.div
+                    variants={{
+                      hidden: { opacity: 0, x: -20 },
+                      visible: { opacity: 1, x: 0 }
+                    }}
+                  >
+                    <button
+                      onClick={handleLogout}
+                      className={`w-full text-left px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center space-x-2 ${
+                        isDarkMode
+                          ? 'text-gray-300 hover:bg-gray-800'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </motion.div>
+                )}
               </motion.div>
             </motion.div>
           )}

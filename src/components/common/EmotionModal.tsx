@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog } from '@headlessui/react';
-import { Heart, Sparkles, Calendar, MapPin } from 'lucide-react';
+import { Heart, Sparkles, Calendar, MapPin, X } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 interface EmotionModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ const EmotionModal: React.FC<EmotionModalProps> = ({
 }) => {
   const [selectedEmotion, setSelectedEmotion] = useState('');
   const [occasion, setOccasion] = useState('');
+  const { user } = useAuthStore();
 
   const emotions = [
     { id: 'excited', label: 'Excited', emoji: '🎉', color: 'bg-yellow-100 text-yellow-800' },
@@ -30,35 +32,59 @@ const EmotionModal: React.FC<EmotionModalProps> = ({
   const handleComplete = () => {
     if (selectedEmotion) {
       onComplete(selectedEmotion, occasion);
+      // Reset form
+      setSelectedEmotion('');
+      setOccasion('');
     }
+  };
+
+  const handleClose = () => {
+    onClose();
+    // Reset form
+    setSelectedEmotion('');
+    setOccasion('');
   };
 
   const ecoImpact = (totalAmount * 0.02).toFixed(1);
   const treesPlanted = Math.floor(totalAmount / 50);
 
+  const isDarkMode = user?.preferences?.darkMode || false;
+
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+    <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
       <div className="fixed inset-0 bg-black/50" />
       
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
+        <Dialog.Panel className={`w-full max-w-lg rounded-2xl shadow-xl ${
+          isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
+        }`}>
           <div className="p-6">
-            <div className="text-center mb-6">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <Heart className="h-6 w-6 text-green-600" />
+            <div className="flex justify-between items-center mb-6">
+              <div className="text-center flex-1">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                  <Heart className="h-6 w-6 text-green-600" />
+                </div>
+                <Dialog.Title className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  How are you feeling about this purchase?
+                </Dialog.Title>
+                <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Help us personalize your experience and create your emotional memory
+                </p>
               </div>
-              <Dialog.Title className="text-xl font-semibold text-gray-900">
-                How are you feeling about this purchase?
-              </Dialog.Title>
-              <p className="mt-2 text-sm text-gray-600">
-                Help us personalize your experience and create your emotional memory
-              </p>
+              <button
+                onClick={handleClose}
+                className={`p-2 rounded-lg transition-colors ${
+                  isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                }`}
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             <div className="space-y-6">
               {/* Emotion Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <label className={`block text-sm font-medium mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Choose your vibe:
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -69,12 +95,22 @@ const EmotionModal: React.FC<EmotionModalProps> = ({
                       className={`p-3 rounded-lg border-2 transition-all text-left ${
                         selectedEmotion === emotion.id
                           ? 'border-green-500 bg-green-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          : isDarkMode
+                            ? 'border-gray-600 hover:border-gray-500 bg-gray-700'
+                            : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className="flex items-center space-x-2">
                         <span className="text-xl">{emotion.emoji}</span>
-                        <span className="font-medium">{emotion.label}</span>
+                        <span className={`font-medium ${
+                          selectedEmotion === emotion.id 
+                            ? 'text-green-900' 
+                            : isDarkMode 
+                              ? 'text-white' 
+                              : 'text-gray-900'
+                        }`}>
+                          {emotion.label}
+                        </span>
                       </div>
                     </button>
                   ))}
@@ -83,7 +119,7 @@ const EmotionModal: React.FC<EmotionModalProps> = ({
 
               {/* Occasion Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   <Calendar className="inline h-4 w-4 mr-1" />
                   What's the occasion? (optional)
                 </label>
@@ -92,17 +128,23 @@ const EmotionModal: React.FC<EmotionModalProps> = ({
                   value={occasion}
                   onChange={(e) => setOccasion(e.target.value)}
                   placeholder="e.g., Date night, Work presentation, Weekend getaway..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                    isDarkMode 
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
                 />
               </div>
 
               {/* Eco Impact Preview */}
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-green-50'}`}>
                 <div className="flex items-center space-x-2 mb-2">
                   <Sparkles className="h-5 w-5 text-green-600" />
-                  <span className="font-medium text-green-800">Your Eco Impact</span>
+                  <span className={`font-medium ${isDarkMode ? 'text-green-400' : 'text-green-800'}`}>
+                    Your Eco Impact
+                  </span>
                 </div>
-                <div className="space-y-1 text-sm text-green-700">
+                <div className={`space-y-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-green-700'}`}>
                   <div className="flex items-center space-x-2">
                     <MapPin className="h-4 w-4" />
                     <span>Restoring {ecoImpact}m² forest in Meghalaya, India</span>
@@ -118,8 +160,12 @@ const EmotionModal: React.FC<EmotionModalProps> = ({
               {/* Action Buttons */}
               <div className="flex space-x-3">
                 <button
-                  onClick={onClose}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  onClick={handleClose}
+                  className={`flex-1 px-4 py-2 border rounded-lg transition-colors ${
+                    isDarkMode 
+                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
                 >
                   Skip
                 </button>

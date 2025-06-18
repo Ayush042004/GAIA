@@ -8,7 +8,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   signup: (email: string, password: string, name: string, role: 'customer' | 'vendor') => Promise<void>;
   updateUserPreferences: (preferences: Partial<User['preferences']>) => void;
   toggleDarkMode: () => void;
@@ -20,7 +20,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
-  isLoading: false, // Changed from true to false initially
+  isLoading: true,
   
   login: async (email: string, password: string) => {
     try {
@@ -29,10 +29,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (error) throw error;
       
       if (data.user) {
+        // Wait a moment for any triggers to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         // Fetch full profile data
         const { data: profile, error: profileError } = await db.getProfile(data.user.id);
         
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+          // If profile doesn't exist, create a basic user object
+          const basicUser: User = {
+            id: data.user.id,
+            email: data.user.email || '',
+            name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+            role: 'customer',
+            preferences: {
+              darkMode: false,
+              notifications: true,
+              shareEcoImpact: true
+            }
+          };
+          
+          set({ 
+            user: basicUser, 
+            isAuthenticated: true,
+            isLoading: false
+          });
+          return;
+        }
         
         if (profile) {
           const user: User = {
@@ -55,7 +79,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 totalEcoCredits: profile.eco_stats[0].total_eco_credits,
                 monthlyImpact: [],
                 impactZones: []
-              } : undefined,
+              } : {
+                treesPlanted: 0,
+                carbonReduced: 0,
+                waterSaved: 0,
+                totalEcoCredits: 0,
+                monthlyImpact: [],
+                impactZones: []
+              },
               moodProfile: profile.mood_profiles?.[0] ? {
                 dominant: profile.mood_profiles[0].dominant_mood || 'casual',
                 distribution: profile.mood_profiles[0].mood_distribution || {},
@@ -63,30 +94,78 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 preferences: profile.mood_profiles[0].preferences || [],
                 spendingByMood: profile.mood_profiles[0].spending_by_mood || {},
                 moodHistory: []
-              } : undefined
+              } : {
+                dominant: 'casual',
+                distribution: { casual: 100 },
+                personality: [],
+                preferences: [],
+                spendingByMood: {},
+                moodHistory: []
+              }
             })
           };
           
           set({ 
             user, 
-            isAuthenticated: true
+            isAuthenticated: true,
+            isLoading: false
           });
         }
       }
     } catch (error: any) {
+      set({ isLoading: false });
       throw new Error(error.message || 'Login failed');
     }
   },
   
   logout: async () => {
     try {
-      await auth.signOut();
+      set({ isLoading: true });
+      
+      // Sign out from Supabase
+      const { error } = await auth.signOut();
+      
+      if (error) {
+        console.error('Logout error:', error);
+        throw error;
+      }
+      
+      // Clear the auth state immediately
       set({ 
         user: null, 
-        isAuthenticated: false 
+        isAuthenticated: false,
+        isLoading: false
       });
+      
+      // Clear any local storage or session data
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.clear();
+      
+      // Show success message
+      toast.success('Logged out successfully');
+      
+      // Force a page reload to ensure clean state
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+      
     } catch (error: any) {
-      toast.error('Logout failed');
+      console.error('Logout failed:', error);
+      set({ isLoading: false });
+      
+      // Even if logout fails, clear local state
+      set({ 
+        user: null, 
+        isAuthenticated: false,
+        isLoading: false
+      });
+      
+      toast.error('Logout failed, but you have been signed out locally');
+      
+      // Force redirect anyway
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     }
   },
   
@@ -97,21 +176,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (error) throw error;
       
       if (data.user) {
-        // The trigger will create the profile automatically
-        // Wait a moment for the trigger to complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait longer for the trigger to complete
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Fetch the created profile
+        // Try to fetch the created profile
         const { data: profile, error: profileError } = await db.getProfile(data.user.id);
         
-        if (profileError) throw profileError;
+        let user: User;
         
-        if (profile) {
-          const user: User = {
-            id: profile.id,
-            email: profile.email,
-            name: profile.name,
-            role: profile.role,
+        if (profileError || !profile) {
+          // If profile creation failed, create a basic user object
+          user = {
+            id: data.user.id,
+            email: data.user.email || '',
+            name: name,
+            role: role,
             preferences: {
               darkMode: false,
               notifications: true,
@@ -136,14 +215,61 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               }
             })
           };
-          
-          set({ 
-            user, 
-            isAuthenticated: true
-          });
+        } else {
+          user = {
+            id: profile.id,
+            email: profile.email,
+            name: profile.name,
+            role: profile.role,
+            preferences: {
+              darkMode: profile.user_preferences?.[0]?.dark_mode || false,
+              currentMood: profile.user_preferences?.[0]?.current_mood || undefined,
+              notifications: profile.user_preferences?.[0]?.notifications || true,
+              shareEcoImpact: profile.user_preferences?.[0]?.share_eco_impact || true
+            },
+            ...(role === 'customer' && {
+              ecoStats: profile.eco_stats?.[0] ? {
+                treesPlanted: profile.eco_stats[0].trees_planted,
+                carbonReduced: profile.eco_stats[0].carbon_reduced,
+                waterSaved: profile.eco_stats[0].water_saved,
+                totalEcoCredits: profile.eco_stats[0].total_eco_credits,
+                monthlyImpact: [],
+                impactZones: []
+              } : {
+                treesPlanted: 0,
+                carbonReduced: 0,
+                waterSaved: 0,
+                totalEcoCredits: 0,
+                monthlyImpact: [],
+                impactZones: []
+              },
+              moodProfile: profile.mood_profiles?.[0] ? {
+                dominant: profile.mood_profiles[0].dominant_mood || 'casual',
+                distribution: profile.mood_profiles[0].mood_distribution || {},
+                personality: profile.mood_profiles[0].personality || [],
+                preferences: profile.mood_profiles[0].preferences || [],
+                spendingByMood: profile.mood_profiles[0].spending_by_mood || {},
+                moodHistory: []
+              } : {
+                dominant: 'casual',
+                distribution: { casual: 100 },
+                personality: [],
+                preferences: [],
+                spendingByMood: {},
+                moodHistory: []
+              }
+            })
+          };
         }
+        
+        set({ 
+          user, 
+          isAuthenticated: true,
+          isLoading: false
+        });
       }
     } catch (error: any) {
+      set({ isLoading: false });
       throw new Error(error.message || 'Signup failed');
     }
   },
@@ -210,7 +336,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 totalEcoCredits: profile.eco_stats[0].total_eco_credits,
                 monthlyImpact: [],
                 impactZones: []
-              } : undefined,
+              } : {
+                treesPlanted: 0,
+                carbonReduced: 0,
+                waterSaved: 0,
+                totalEcoCredits: 0,
+                monthlyImpact: [],
+                impactZones: []
+              },
               moodProfile: profile.mood_profiles?.[0] ? {
                 dominant: profile.mood_profiles[0].dominant_mood || 'casual',
                 distribution: profile.mood_profiles[0].mood_distribution || {},
@@ -218,7 +351,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 preferences: profile.mood_profiles[0].preferences || [],
                 spendingByMood: profile.mood_profiles[0].spending_by_mood || {},
                 moodHistory: []
-              } : undefined
+              } : {
+                dominant: 'casual',
+                distribution: { casual: 100 },
+                personality: [],
+                preferences: [],
+                spendingByMood: {},
+                moodHistory: []
+              }
             })
           };
           
@@ -228,13 +368,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isLoading: false 
           });
         } else {
-          set({ isLoading: false });
+          // If profile doesn't exist but user is authenticated, create basic user
+          const basicUser: User = {
+            id: user.id,
+            email: user.email || '',
+            name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+            role: 'customer',
+            preferences: {
+              darkMode: false,
+              notifications: true,
+              shareEcoImpact: true
+            }
+          };
+          
+          set({ 
+            user: basicUser, 
+            isAuthenticated: true, 
+            isLoading: false 
+          });
         }
       } else {
-        set({ isLoading: false });
+        set({ 
+          user: null, 
+          isAuthenticated: false, 
+          isLoading: false 
+        });
       }
     } catch (error) {
-      set({ isLoading: false });
+      console.error('Auth initialization error:', error);
+      set({ 
+        user: null, 
+        isAuthenticated: false, 
+        isLoading: false 
+      });
     }
   },
 
@@ -266,7 +432,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               totalEcoCredits: profile.eco_stats[0].total_eco_credits,
               monthlyImpact: [],
               impactZones: []
-            } : undefined,
+            } : {
+              treesPlanted: 0,
+              carbonReduced: 0,
+              waterSaved: 0,
+              totalEcoCredits: 0,
+              monthlyImpact: [],
+              impactZones: []
+            },
             moodProfile: profile.mood_profiles?.[0] ? {
               dominant: profile.mood_profiles[0].dominant_mood || 'casual',
               distribution: profile.mood_profiles[0].mood_distribution || {},
@@ -274,7 +447,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               preferences: profile.mood_profiles[0].preferences || [],
               spendingByMood: profile.mood_profiles[0].spending_by_mood || {},
               moodHistory: []
-            } : undefined
+            } : {
+              dominant: 'casual',
+              distribution: { casual: 100 },
+              personality: [],
+              preferences: [],
+              spendingByMood: {},
+              moodHistory: []
+            }
           })
         };
         
@@ -288,7 +468,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
 // Set up auth state listener
 auth.onAuthStateChange((event, session) => {
+  const { initializeAuth, logout } = useAuthStore.getState();
+  
   if (event === 'SIGNED_OUT') {
-    useAuthStore.getState().logout();
+    // Clear state immediately when signed out
+    useAuthStore.setState({ 
+      user: null, 
+      isAuthenticated: false, 
+      isLoading: false 
+    });
+  } else if (event === 'SIGNED_IN' && session) {
+    // Re-initialize auth when user signs in
+    initializeAuth();
   }
 });

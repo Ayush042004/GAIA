@@ -59,7 +59,7 @@ export const db = {
         mood_profiles(*)
       `)
       .eq('id', userId)
-      .single();
+      .maybeSingle();
     return { data, error };
   },
 
