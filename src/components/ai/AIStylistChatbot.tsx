@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Send, X, Sparkles, User, Bot, ShoppingBag, Leaf, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
-import { useCartStore } from '../../store/cartStore';
+//import { useCartStore } from '../../store/cartStore';
 
 interface Message {
   id: string;
@@ -20,7 +20,7 @@ const AIStylistChatbot: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthStore();
-  const { items: cartItems, getTotalPrice } = useCartStore();
+  //const { items: cartItems, getTotalPrice } = useCartStore();
 
   const isDarkMode = user?.preferences?.darkMode || false;
 
@@ -56,92 +56,42 @@ const AIStylistChatbot: React.FC = () => {
     { text: 'Date night styling tips', icon: Heart }
   ];
 
-  const generateAIResponse = (userMessage: string): Message => {
-    const lowerMessage = userMessage.toLowerCase();
-    let response = '';
-    let suggestions: string[] = [];
-    let products: any[] = [];
+  const generateAIResponse = async (userMessage: string): Promise<Message> => {
+    try {
+      const response = await fetch('http://localhost:3001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: userMessage }),
+      });
 
-    // Cart-related queries
-    if (lowerMessage.includes('cart') || lowerMessage.includes('items')) {
-      if (cartItems.length === 0) {
-        response = "Your cart is currently empty! Would you like me to recommend some pieces based on your mood or a specific occasion?";
-        suggestions = ['Show me elegant pieces', 'Casual weekend outfits', 'Professional workwear'];
-      } else {
-        const cartValue = getTotalPrice();
-        const ecoImpact = cartValue * 0.02;
-        response = `You have ${cartItems.length} item${cartItems.length > 1 ? 's' : ''} in your cart worth $${cartValue.toFixed(2)}. Your eco impact: ~${ecoImpact.toFixed(1)}m² forest restoration! 🌱\n\nHere's how to style these pieces:`;
-        
-        cartItems.forEach(item => {
-          response += `\n\n• **${item.product.name}**: ${item.product.stylingTips?.[0] || 'Perfect for versatile styling'}`;
-        });
-        
-        suggestions = ['Add accessories', 'Complete the look', 'Eco impact details'];
-      }
-    }
-    
-    // Eco impact queries
-    else if (lowerMessage.includes('eco') || lowerMessage.includes('impact') || lowerMessage.includes('environment')) {
-      const totalImpact = user?.ecoStats?.treesPlanted || 0;
-      response = `🌍 Your eco journey is amazing! You've helped plant ${totalImpact} trees and saved ${user?.ecoStats?.waterSaved || 0}L of water.\n\nEvery GAIA purchase contributes to:\n• Forest restoration in Meghalaya, India\n• Ocean plastic cleanup\n• Sustainable farming communities\n• Carbon footprint reduction`;
-      suggestions = ['How does it work?', 'Gift eco impact', 'See impact map'];
-    }
-    
-    // Mood-based styling
-    else if (lowerMessage.includes('confident') || lowerMessage.includes('bold')) {
-      response = "For a confident vibe, I recommend:\n\n💪 **Power pieces**: Structured blazers, statement jewelry\n👠 **Bold accessories**: Chunky heels, oversized bags\n🎨 **Colors**: Deep reds, royal blues, classic black\n✨ **Styling tip**: Layer textures and add one statement piece!";
-      suggestions = ['Show confident pieces', 'Professional confidence', 'Date night confidence'];
-    }
-    
-    else if (lowerMessage.includes('elegant') || lowerMessage.includes('classy')) {
-      response = "Elegant styling is all about refined simplicity:\n\n✨ **Key pieces**: Silk blouses, midi dresses, tailored pants\n💎 **Accessories**: Delicate jewelry, structured handbags\n🎨 **Colors**: Neutrals, soft pastels, timeless black & white\n👗 **Styling tip**: Less is more - choose quality over quantity!";
-      suggestions = ['Show elegant pieces', 'Evening elegance', 'Casual elegance'];
-    }
-    
-    else if (lowerMessage.includes('calm') || lowerMessage.includes('zen') || lowerMessage.includes('relaxed')) {
-      response = "For a calm, zen vibe:\n\n🧘‍♀️ **Comfort first**: Soft fabrics, loose fits, breathable materials\n🌿 **Natural tones**: Earth colors, soft greens, warm beiges\n☁️ **Textures**: Cotton, linen, bamboo, organic materials\n💆‍♀️ **Styling tip**: Choose pieces that make you feel at peace!";
-      suggestions = ['Show calm pieces', 'Yoga outfits', 'Weekend relaxation'];
-    }
-    
-    else if (lowerMessage.includes('romantic') || lowerMessage.includes('date')) {
-      response = "Creating romantic vibes:\n\n💕 **Feminine touches**: Flowing fabrics, soft silhouettes\n🌸 **Colors**: Blush pink, soft lavender, cream\n✨ **Details**: Lace accents, delicate prints, subtle sparkle\n👗 **Styling tip**: Add one romantic element to any outfit!";
-      suggestions = ['Date night outfits', 'Romantic accessories', 'Dinner date looks'];
-    }
-    
-    // Occasion-based styling
-    else if (lowerMessage.includes('work') || lowerMessage.includes('professional') || lowerMessage.includes('office')) {
-      response = "Professional styling made easy:\n\n👔 **Foundation**: Well-fitted blazer, quality basics\n📊 **Colors**: Navy, charcoal, cream, burgundy\n💼 **Accessories**: Structured bag, classic watch, minimal jewelry\n👠 **Footwear**: Comfortable heels or polished flats\n💡 **Pro tip**: Invest in versatile pieces you can mix & match!";
-      suggestions = ['Show work outfits', 'Meeting looks', 'Business casual'];
-    }
-    
-    else if (lowerMessage.includes('weekend') || lowerMessage.includes('casual')) {
-      response = "Weekend casual done right:\n\n👕 **Comfort**: Soft tees, cozy sweaters, relaxed denim\n👟 **Footwear**: Sneakers, comfortable flats, ankle boots\n🎒 **Accessories**: Crossbody bags, baseball caps, sunglasses\n🌈 **Colors**: Whatever makes you happy!\n😊 **Styling tip**: Comfort doesn't mean compromising style!";
-      suggestions = ['Casual outfits', 'Weekend activities', 'Brunch looks'];
-    }
-    
-    // General styling advice
-    else if (lowerMessage.includes('style') || lowerMessage.includes('outfit') || lowerMessage.includes('wear')) {
-      response = "I'd love to help you style the perfect outfit! What's the occasion or mood you're going for?\n\n✨ **Quick styling tips**:\n• Start with one statement piece\n• Balance proportions (fitted + loose)\n• Add texture through accessories\n• Consider the color story\n• Most importantly - wear what makes YOU feel amazing!";
-      suggestions = ['Specific occasion help', 'Color coordination', 'Accessory advice', 'Body type styling'];
-    }
-    
-    // Default response
-    else {
-      response = "I'm here to help with all your styling needs! Whether you need outfit ideas, want to understand your eco impact, or have questions about your cart - just ask! 💫\n\nWhat would you like to explore today?";
-      suggestions = ['Style advice', 'Eco impact info', 'Cart styling', 'Mood outfits'];
-    }
+      const data = await response.json();
 
-    return {
-      id: Date.now().toString(),
-      type: 'ai',
-      content: response,
-      timestamp: new Date(),
-      suggestions,
-      products
-    };
+      const aiResponse: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: data.reply || 'Sorry, something went wrong.',
+        timestamp: new Date(),
+        suggestions: data.suggestions || [],
+        products: data.products || []
+      };
+
+      return aiResponse;
+    } catch (error) {
+      console.error('Error fetching AI response:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: "Sorry, I couldn't reach the AI right now. Please try again later.",
+        timestamp: new Date(),
+        suggestions: ['Try again', 'Style advice', 'Cart help']
+      };
+      return errorMessage;
+    }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
     const userMessage: Message = {
@@ -155,12 +105,22 @@ const AIStylistChatbot: React.FC = () => {
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate AI thinking time
-    setTimeout(() => {
-      const aiResponse = generateAIResponse(inputValue);
+    try {
+      const aiResponse = await generateAIResponse(inputValue);
       setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error in handleSendMessage:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: "Sorry, I couldn't process your request. Please try again later.",
+        timestamp: new Date(),
+        suggestions: ['Try again', 'Style advice', 'Cart help']
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1000 + Math.random() * 1000);
+    }
   };
 
   const handleQuickAction = (action: string) => {
