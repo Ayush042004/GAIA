@@ -58,7 +58,9 @@ const AIStylistChatbot: React.FC = () => {
 
   const generateAIResponse = async (userMessage: string): Promise<Message> => {
     try {
-      const response = await fetch('http://localhost:3001/api/chat', {
+      console.log("Sending message to backend:", userMessage);
+
+      const response = await fetch('http://localhost:3000/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,6 +69,8 @@ const AIStylistChatbot: React.FC = () => {
       });
 
       const data = await response.json();
+      console.log("AI Response:", data);
+
 
       const aiResponse: Message = {
         id: Date.now().toString(),
