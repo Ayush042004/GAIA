@@ -3,6 +3,7 @@ import { MessageCircle, Send, X, Sparkles, User, Bot, ShoppingBag, Leaf, Heart }
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
 //import { useCartStore } from '../../store/cartStore';
+import { GoogleGenAI } from "@google/genai";
 
 interface Message {
   id: string;
@@ -20,7 +21,39 @@ const AIStylistChatbot: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthStore();
-  //const { items: cartItems, getTotalPrice } = useCartStore();
+  
+
+const ai = new GoogleGenAI({
+  apiKey: import.meta.env.VITE_GEMINI_API_KEY as string,
+});
+
+  
+  const prompt = `
+  You are an AI Fashion Stylist inside Project Gaia — an emotion-driven, ESG-aligned commerce platform.
+  You are NOT allowed to talk about topics unrelated to fashion, styling, or eco-conscious product impact.
+  
+  ### You Can Handle:
+  Mood-based outfit suggestions
+  - Styling tips for specific occasions
+  - Sustainable fashion advice
+  - Product descriptions based on user vibes
+  - Emotion + fashion pairing (e.g., “What should I wear if I’m feeling bold?”)
+  - AI outfit recommendations for past purchases
+  - Mood-based outfit naming and tagging
+  - Styling based on weather, climate, or event
+  
+    ### Response Format:
+    - Use markdown formatting for clarity
+    - Use bold text for section headers
+    - Use bullet points for lists
+    - Include emoji where appropriate
+    
+   ### You CANNOT:
+- Give political opinions
+- Discuss unrelated news, celebrities, or gossip
+- Provide non-fashion or non-shopping advice
+- Talk about anything unrelated to mood-based styling or eco-conscious commerce
+`;
 
   const isDarkMode = user?.preferences?.darkMode || false;
 
@@ -58,30 +91,25 @@ const AIStylistChatbot: React.FC = () => {
 
   const generateAIResponse = async (userMessage: string): Promise<Message> => {
     try {
-      console.log("Sending message to backend:", userMessage);
+       const result = await ai.models.generateContent({
+        model:  "gemini-2.5-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: `${prompt}\n${userMessage}` }]
+          }
+        ],
+             })
+         const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response.";
+      
+      const aiMessage: Message = {
+      id: Date.now().toString(),
+      type: 'ai',
+      content: text || "Hmm, I couldn't generate a response.",
+      timestamp: new Date()
+    };
 
-      const response = await fetch('http://localhost:3000/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: userMessage }),
-      });
-
-      const data = await response.json();
-      console.log("AI Response:", data);
-
-
-      const aiResponse: Message = {
-        id: Date.now().toString(),
-        type: 'ai',
-        content: data.reply || 'Sorry, something went wrong.',
-        timestamp: new Date(),
-        suggestions: data.suggestions || [],
-        products: data.products || []
-      };
-
-      return aiResponse;
+    return aiMessage;
     } catch (error) {
       console.error('Error fetching AI response:', error);
       const errorMessage: Message = {
