@@ -1,47 +1,68 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './components/common/Layout';
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
-import Games from './pages/Games';
-import TopPicks from './pages/TopPicks';
-import Gift from './pages/Gift';
-import Vendor from './pages/Vendor';
-import Wishlist from './pages/Wishlist';
-import VirtualWardrobe from './components/wardrobe/VirtualWardrobe';
-import { useAuthStore } from './store/authStore';
+import React from 'react';
+import { AppProvider, useApp } from './contexts/AppContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import Header from './components/Layout/Header';
+import Sidebar from './components/Layout/Sidebar';
+import Dashboard from './components/Dashboard/Dashboard';
+import FileUpload from './components/FileUpload/FileUpload';
+import StudySessions from './components/StudySessions/StudySessions';
+import Whiteboard from './components/Whiteboard/Whiteboard';
+import Analytics from './components/Analytics/Analytics';
+import Quiz from './components/Quiz/Quiz';
+import Leaderboard from './components/Leaderboard/Leaderboard';
+import AuthForm from './components/Auth/AuthForm';
 
-function App() {
-  const { initializeAuth, isLoading } = useAuthStore();
+function AppContent() {
+  const { state } = useApp();
 
-  useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
-
-  // Show loading spinner while initializing auth
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600"></div>
-      </div>
-    );
+  // Show auth form if user is not authenticated
+  if (!state.auth.isAuthenticated) {
+    return <AuthForm />;
   }
 
+  const renderActiveView = () => {
+    switch (state.activeView) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'upload':
+        return <FileUpload />;
+      case 'sessions':
+        return <StudySessions />;
+      case 'quiz':
+        return <Quiz />;
+      case 'whiteboard':
+        return <Whiteboard />;
+      case 'leaderboard':
+        return <Leaderboard />;
+      case 'analytics':
+        return <Analytics />;
+      default:
+        return <Dashboard />;
+    }
+  };
+
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="games" element={<Games />} />
-          <Route path="top-picks" element={<TopPicks />} />
-          <Route path="gift" element={<Gift />} />
-          <Route path="vendor" element={<Vendor />} />
-          <Route path="wishlist" element={<Wishlist />} />
-          <Route path="wardrobe" element={<VirtualWardrobe />} />
-        </Route>
-      </Routes>
-    </Router>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-all duration-300">
+      <Header />
+      <div className="flex h-[calc(100vh-4rem)]">
+        <Sidebar />
+        <main className="flex-1 overflow-auto bg-gray-50/50 dark:bg-gray-800/50 transition-all duration-300">
+          <div className="p-8 h-full">
+            {renderActiveView()}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </ThemeProvider>
   );
 }
 
