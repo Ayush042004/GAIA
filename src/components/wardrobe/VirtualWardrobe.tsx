@@ -1,10 +1,26 @@
-import React, { useState, useRef } from 'react';
-import { Upload, Camera, Plus, X, Sparkles, Shirt, Eye, Trash2, Tag, Search, Filter } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, Camera, Plus, X, Sparkles, Shirt, Eye, Trash2, Tag, Search, Filter, Edit, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
 import { useWardrobeStore } from '../../store/wardrobeStore';
 import { WardrobeItem, WardrobeCategory } from '../../types';
 import toast from 'react-hot-toast';
+
+interface PreviewItem {
+  id: string;
+  file: File;
+  imageUrl: string;
+  name: string;
+  category: WardrobeCategory;
+  color: string;
+  brand: string;
+  style: string;
+  season: string;
+  tags: string[];
+  mood: string[];
+  price?: number;
+  notes?: string;
+}
 
 const VirtualWardrobe: React.FC = () => {
   const { user } = useAuthStore();
@@ -20,10 +36,15 @@ const VirtualWardrobe: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<WardrobeCategory | 'all'>('all');
   const [selectedMood, setSelectedMood] = useState<string>('all');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [uploadMethod, setUploadMethod] = useState<'photo' | 'brand'>('photo');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const [newTag, setNewTag] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -41,55 +62,144 @@ const VirtualWardrobe: React.FC = () => {
   ];
 
   const moods = ['all', 'casual', 'professional', 'elegant', 'sporty', 'party', 'romantic'];
+  const colors = ['black', 'white', 'blue', 'red', 'green', 'gray', 'brown', 'pink', 'purple', 'yellow', 'orange'];
+  const styles = ['casual', 'formal', 'sporty', 'bohemian', 'vintage', 'modern', 'classic', 'trendy'];
+  const seasons = ['spring', 'summer', 'fall', 'winter', 'all-season'];
+
+  // Load items from localStorage on component mount
+  useEffect(() => {
+    const savedItems = localStorage.getItem('wardrobeItems');
+    if (savedItems) {
+      try {
+        const parsedItems = JSON.parse(savedItems);
+        parsedItems.forEach((item: WardrobeItem) => {
+          if (!items.find(existingItem => existingItem.id === item.id)) {
+            addItem(item);
+          }
+        });
+      } catch (error) {
+        console.error('Error loading wardrobe items:', error);
+      }
+    }
+  }, []);
+
+  // Save items to localStorage whenever items change
+  useEffect(() => {
+    if (items.length > 0) {
+      localStorage.setItem('wardrobeItems', JSON.stringify(items));
+    }
+  }, [items]);
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     setIsAnalyzing(true);
+    const newPreviewItems: PreviewItem[] = [];
     
-    // Simulate AI analysis
+    // Process each file
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const imageUrl = URL.createObjectURL(file);
       
-      // Mock AI analysis results
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Simulate AI analysis
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const mockAnalysis = {
-        category: ['tops', 'bottoms', 'dresses', 'outerwear'][Math.floor(Math.random() * 4)] as WardrobeCategory,
-        color: ['black', 'white', 'blue', 'red', 'green', 'gray'][Math.floor(Math.random() * 6)],
-        style: ['casual', 'formal', 'sporty', 'bohemian'][Math.floor(Math.random() * 4)],
+        category: ['tops', 'bottoms', 'dresses', 'outerwear', 'shoes', 'accessories'][Math.floor(Math.random() * 6)] as WardrobeCategory,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        style: styles[Math.floor(Math.random() * styles.length)],
         brand: 'Unknown',
-        season: ['spring', 'summer', 'fall', 'winter'][Math.floor(Math.random() * 4)]
+        season: seasons[Math.floor(Math.random() * seasons.length)]
       };
 
-      const newItem: WardrobeItem = {
+      const previewItem: PreviewItem = {
         id: Date.now().toString() + i,
+        file,
+        imageUrl,
         name: `${mockAnalysis.style} ${mockAnalysis.category}`,
         category: mockAnalysis.category,
         color: mockAnalysis.color,
         brand: mockAnalysis.brand,
         style: mockAnalysis.style,
         season: mockAnalysis.season,
-        image: imageUrl,
-        dateAdded: new Date().toISOString(),
-        wearCount: 0,
-        lastWorn: null,
         tags: [mockAnalysis.style, mockAnalysis.color],
         mood: [mockAnalysis.style === 'formal' ? 'professional' : 'casual']
       };
 
-      addItem(newItem);
+      newPreviewItems.push(previewItem);
     }
 
+    setPreviewItems(newPreviewItems);
+    setCurrentPreviewIndex(0);
     setIsAnalyzing(false);
     setShowUploadModal(false);
-    toast.success(`Added ${files.length} item${files.length > 1 ? 's' : ''} to your wardrobe!`);
+    setShowPreviewModal(true);
   };
 
-  const handleBrandSync = () => {
-    // Mock brand sync
-    toast.success('Brand sync feature coming soon!');
+  const handleSaveCurrentItem = () => {
+    const currentItem = previewItems[currentPreviewIndex];
+    if (!currentItem) return;
+
+    const wardrobeItem: WardrobeItem = {
+      id: currentItem.id,
+      name: currentItem.name,
+      category: currentItem.category,
+      color: currentItem.color,
+      brand: currentItem.brand,
+      style: currentItem.style,
+      season: currentItem.season,
+      image: currentItem.imageUrl,
+      dateAdded: new Date().toISOString(),
+      wearCount: 0,
+      lastWorn: null,
+      tags: currentItem.tags,
+      mood: currentItem.mood,
+      price: currentItem.price,
+      notes: currentItem.notes
+    };
+
+    addItem(wardrobeItem);
+    toast.success(`${currentItem.name} added to wardrobe!`);
+
+    // Move to next item or close modal
+    if (currentPreviewIndex < previewItems.length - 1) {
+      setCurrentPreviewIndex(currentPreviewIndex + 1);
+    } else {
+      setShowPreviewModal(false);
+      setPreviewItems([]);
+      setCurrentPreviewIndex(0);
+    }
+  };
+
+  const handleSkipItem = () => {
+    if (currentPreviewIndex < previewItems.length - 1) {
+      setCurrentPreviewIndex(currentPreviewIndex + 1);
+    } else {
+      setShowPreviewModal(false);
+      setPreviewItems([]);
+      setCurrentPreviewIndex(0);
+    }
+  };
+
+  const updatePreviewItem = (field: keyof PreviewItem, value: any) => {
+    setPreviewItems(prev => prev.map((item, index) => 
+      index === currentPreviewIndex ? { ...item, [field]: value } : item
+    ));
+  };
+
+  const addTag = () => {
+    if (newTag.trim() && previewItems[currentPreviewIndex]) {
+      const currentTags = previewItems[currentPreviewIndex].tags;
+      if (!currentTags.includes(newTag.trim())) {
+        updatePreviewItem('tags', [...currentTags, newTag.trim()]);
+      }
+      setNewTag('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    const currentTags = previewItems[currentPreviewIndex].tags;
+    updatePreviewItem('tags', currentTags.filter(tag => tag !== tagToRemove));
   };
 
   const filteredItems = items.filter(item => {
@@ -214,14 +324,14 @@ const VirtualWardrobe: React.FC = () => {
           ))}
         </motion.div>
 
-        {/* Filters */}
+        {/* Search and Filters */}
         <motion.div 
           className={`p-6 rounded-xl mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4 mb-4">
             {/* Search */}
             <div className="flex-1 min-w-64">
               <div className="relative">
@@ -247,7 +357,7 @@ const VirtualWardrobe: React.FC = () => {
               className={`px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                 isDarkMode 
                   ? 'bg-gray-700 border-gray-600 text-white' 
-                  : 'bg-white border-gray-300 text-gray-900'
+                  : 'bg-white border-gray-300'
               }`}
             >
               {categories.map(category => (
@@ -264,7 +374,7 @@ const VirtualWardrobe: React.FC = () => {
               className={`px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                 isDarkMode 
                   ? 'bg-gray-700 border-gray-600 text-white' 
-                  : 'bg-white border-gray-300 text-gray-900'
+                  : 'bg-white border-gray-300'
               }`}
             >
               {moods.map(mood => (
@@ -273,10 +383,38 @@ const VirtualWardrobe: React.FC = () => {
                 </option>
               ))}
             </select>
+
+            {/* View Mode Toggle */}
+            <div className={`flex rounded-lg p-1 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  viewMode === 'grid' 
+                    ? 'bg-purple-600 text-white' 
+                    : isDarkMode 
+                      ? 'text-gray-300 hover:text-white' 
+                      : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Grid
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  viewMode === 'list' 
+                    ? 'bg-purple-600 text-white' 
+                    : isDarkMode 
+                      ? 'text-gray-300 hover:text-white' 
+                      : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                List
+              </button>
+            </div>
           </div>
         </motion.div>
 
-        {/* Wardrobe Grid */}
+        {/* Wardrobe Items */}
         {filteredItems.length === 0 ? (
           <motion.div 
             className="text-center py-12"
@@ -310,7 +448,10 @@ const VirtualWardrobe: React.FC = () => {
           </motion.div>
         ) : (
           <motion.div 
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4"
+            className={viewMode === 'grid' 
+              ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4' 
+              : 'space-y-4'
+            }
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -321,11 +462,13 @@ const VirtualWardrobe: React.FC = () => {
                 variants={itemVariants}
                 className={`group relative rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${
                   isDarkMode ? 'bg-gray-800' : 'bg-white'
-                }`}
+                } ${viewMode === 'list' ? 'flex' : ''}`}
                 whileHover={{ scale: 1.02, y: -5 }}
                 custom={index}
               >
-                <div className="aspect-square relative overflow-hidden">
+                <div className={`relative overflow-hidden ${
+                  viewMode === 'list' ? 'w-24 h-24 flex-shrink-0' : 'aspect-square'
+                }`}>
                   <img
                     src={item.image}
                     alt={item.name}
@@ -345,26 +488,28 @@ const VirtualWardrobe: React.FC = () => {
                       </motion.button>
                     </div>
                     
-                    <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex space-x-1">
-                        <motion.button
-                          className="flex-1 bg-white/90 text-gray-900 py-1 px-2 rounded text-xs font-medium"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Eye className="h-3 w-3 inline mr-1" />
-                          View
-                        </motion.button>
-                        <motion.button
-                          className="flex-1 bg-purple-600 text-white py-1 px-2 rounded text-xs font-medium"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Sparkles className="h-3 w-3 inline mr-1" />
-                          Style
-                        </motion.button>
+                    {viewMode === 'grid' && (
+                      <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex space-x-1">
+                          <motion.button
+                            className="flex-1 bg-white/90 text-gray-900 py-1 px-2 rounded text-xs font-medium"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Eye className="h-3 w-3 inline mr-1" />
+                            View
+                          </motion.button>
+                          <motion.button
+                            className="flex-1 bg-purple-600 text-white py-1 px-2 rounded text-xs font-medium"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Sparkles className="h-3 w-3 inline mr-1" />
+                            Style
+                          </motion.button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Wear Count Badge */}
@@ -375,7 +520,7 @@ const VirtualWardrobe: React.FC = () => {
                   )}
                 </div>
 
-                <div className="p-3">
+                <div className={`p-3 ${viewMode === 'list' ? 'flex-1' : ''}`}>
                   <h3 className={`font-medium text-sm mb-1 truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                     {item.name}
                   </h3>
@@ -383,9 +528,20 @@ const VirtualWardrobe: React.FC = () => {
                     {item.brand} • {item.color}
                   </p>
                   
+                  {viewMode === 'list' && (
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {item.category} • {item.style}
+                      </span>
+                      <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {item.season}
+                      </span>
+                    </div>
+                  )}
+                  
                   {/* Tags */}
                   <div className="flex flex-wrap gap-1">
-                    {item.tags.slice(0, 2).map((tag, tagIndex) => (
+                    {item.tags.slice(0, viewMode === 'list' ? 4 : 2).map((tag, tagIndex) => (
                       <span
                         key={tagIndex}
                         className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full"
@@ -393,11 +549,11 @@ const VirtualWardrobe: React.FC = () => {
                         {tag}
                       </span>
                     ))}
-                    {item.tags.length > 2 && (
+                    {item.tags.length > (viewMode === 'list' ? 4 : 2) && (
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
                       }`}>
-                        +{item.tags.length - 2}
+                        +{item.tags.length - (viewMode === 'list' ? 4 : 2)}
                       </span>
                     )}
                   </div>
@@ -534,7 +690,6 @@ const VirtualWardrobe: React.FC = () => {
                         {['Zara', 'H&M', 'Nike', 'Adidas', 'Uniqlo'].map((brand) => (
                           <motion.button
                             key={brand}
-                            onClick={handleBrandSync}
                             className={`w-full flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors ${
                               isDarkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-200'
                             }`}
@@ -554,9 +709,9 @@ const VirtualWardrobe: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* Recommendations Modal */}
+        {/* Preview Modal */}
         <AnimatePresence>
-          {showRecommendations && (
+          {showPreviewModal && previewItems.length > 0 && (
             <motion.div
               className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
               initial={{ opacity: 0 }}
@@ -564,7 +719,7 @@ const VirtualWardrobe: React.FC = () => {
               exit={{ opacity: 0 }}
             >
               <motion.div
-                className={`w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-xl ${
+                className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-xl ${
                   isDarkMode ? 'bg-gray-800' : 'bg-white'
                 }`}
                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -573,11 +728,20 @@ const VirtualWardrobe: React.FC = () => {
               >
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      AI Outfit Recommendations
-                    </h3>
+                    <div>
+                      <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Preview & Edit Item
+                      </h3>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Item {currentPreviewIndex + 1} of {previewItems.length}
+                      </p>
+                    </div>
                     <motion.button
-                      onClick={() => setShowRecommendations(false)}
+                      onClick={() => {
+                        setShowPreviewModal(false);
+                        setPreviewItems([]);
+                        setCurrentPreviewIndex(0);
+                      }}
                       className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
                       whileHover={{ scale: 1.1, rotate: 90 }}
                       whileTap={{ scale: 0.9 }}
@@ -586,49 +750,227 @@ const VirtualWardrobe: React.FC = () => {
                     </motion.button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[
-                      { name: 'Casual Friday', items: ['Blue Jeans', 'White Shirt', 'Sneakers'], mood: 'casual' },
-                      { name: 'Date Night', items: ['Black Dress', 'Heels', 'Statement Necklace'], mood: 'romantic' },
-                      { name: 'Business Meeting', items: ['Blazer', 'Dress Pants', 'Oxford Shoes'], mood: 'professional' }
-                    ].map((outfit, index) => (
-                      <motion.div
-                        key={outfit.name}
-                        className={`p-4 rounded-xl border ${
-                          isDarkMode ? 'border-gray-700 bg-gray-700' : 'border-gray-200 bg-gray-50'
-                        }`}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{ scale: 1.02 }}
-                      >
-                        <h4 className={`font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {outfit.name}
-                        </h4>
-                        <div className="space-y-2 mb-4">
-                          {outfit.items.map((item, itemIndex) => (
-                            <div key={itemIndex} className="flex items-center space-x-2">
-                              <div className="w-8 h-8 bg-gray-300 rounded"></div>
-                              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                {item}
-                              </span>
-                            </div>
-                          ))}
+                  {previewItems[currentPreviewIndex] && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Image Preview */}
+                      <div>
+                        <img
+                          src={previewItems[currentPreviewIndex].imageUrl}
+                          alt="Preview"
+                          className="w-full h-64 object-cover rounded-lg"
+                        />
+                      </div>
+
+                      {/* Edit Form */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Item Name
+                          </label>
+                          <input
+                            type="text"
+                            value={previewItems[currentPreviewIndex].name}
+                            onChange={(e) => updatePreviewItem('name', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                              isDarkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300'
+                            }`}
+                          />
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
-                            {outfit.mood}
-                          </span>
-                          <motion.button
-                            className="text-purple-600 text-sm font-medium"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Category
+                            </label>
+                            <select
+                              value={previewItems[currentPreviewIndex].category}
+                              onChange={(e) => updatePreviewItem('category', e.target.value)}
+                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                                isDarkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            >
+                              {categories.slice(1).map(category => (
+                                <option key={category.id} value={category.id}>
+                                  {category.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Color
+                            </label>
+                            <select
+                              value={previewItems[currentPreviewIndex].color}
+                              onChange={(e) => updatePreviewItem('color', e.target.value)}
+                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                                isDarkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            >
+                              {colors.map(color => (
+                                <option key={color} value={color}>
+                                  {color.charAt(0).toUpperCase() + color.slice(1)}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Brand
+                            </label>
+                            <input
+                              type="text"
+                              value={previewItems[currentPreviewIndex].brand}
+                              onChange={(e) => updatePreviewItem('brand', e.target.value)}
+                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                                isDarkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            />
+                          </div>
+
+                          <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Style
+                            </label>
+                            <select
+                              value={previewItems[currentPreviewIndex].style}
+                              onChange={(e) => updatePreviewItem('style', e.target.value)}
+                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                                isDarkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            >
+                              {styles.map(style => (
+                                <option key={style} value={style}>
+                                  {style.charAt(0).toUpperCase() + style.slice(1)}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Season
+                          </label>
+                          <select
+                            value={previewItems[currentPreviewIndex].season}
+                            onChange={(e) => updatePreviewItem('season', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                              isDarkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300'
+                            }`}
                           >
-                            Try Outfit
-                          </motion.button>
+                            {seasons.map(season => (
+                              <option key={season} value={season}>
+                                {season.charAt(0).toUpperCase() + season.slice(1)}
+                              </option>
+                            ))}
+                          </select>
                         </div>
-                      </motion.div>
-                    ))}
+
+                        {/* Tags */}
+                        <div>
+                          <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Tags
+                          </label>
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {previewItems[currentPreviewIndex].tags.map((tag, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full"
+                              >
+                                {tag}
+                                <button
+                                  onClick={() => removeTag(tag)}
+                                  className="ml-1 text-purple-600 hover:text-purple-800"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex space-x-2">
+                            <input
+                              type="text"
+                              value={newTag}
+                              onChange={(e) => setNewTag(e.target.value)}
+                              onKeyPress={(e) => e.key === 'Enter' && addTag()}
+                              placeholder="Add tag..."
+                              className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                                isDarkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            />
+                            <button
+                              onClick={addTag}
+                              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Price (optional)
+                          </label>
+                          <input
+                            type="number"
+                            value={previewItems[currentPreviewIndex].price || ''}
+                            onChange={(e) => updatePreviewItem('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                              isDarkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300'
+                            }`}
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-between items-center mt-6 pt-6 border-t border-gray-200">
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={handleSkipItem}
+                        className={`px-4 py-2 border rounded-lg transition-colors ${
+                          isDarkMode 
+                            ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        Skip
+                      </button>
+                      <button
+                        onClick={handleSaveCurrentItem}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                      >
+                        <Save className="h-4 w-4" />
+                        <span>Save Item</span>
+                      </button>
+                    </div>
+                    
+                    <div className="text-sm text-gray-500">
+                      {currentPreviewIndex + 1} of {previewItems.length}
+                    </div>
                   </div>
                 </div>
               </motion.div>

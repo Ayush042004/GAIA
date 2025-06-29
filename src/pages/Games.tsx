@@ -10,12 +10,15 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuthStore } from '../store/authStore';
 
 const Games: React.FC = () => {
   const [currentGame, setCurrentGame] = useState<string | null>(null);
   const [moodMatchScore, setMoodMatchScore] = useState(0);
   const [spinResult, setSpinResult] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
+  const { user } = useAuthStore();
+  const isDarkMode = user?.preferences?.darkMode || false;
 
   // MoodMatch Game
   const moods = [
@@ -101,8 +104,12 @@ const Games: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className={`min-h-screen transition-colors ${
+      isDarkMode 
+        ? 'bg-gray-900 text-white' 
+        : 'bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50'
+    }`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center space-x-2 mb-4">
@@ -111,7 +118,9 @@ const Games: React.FC = () => {
               Mood Games
             </h1>
           </div>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className={`text-xl max-w-2xl mx-auto ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+          }`}>
             Play, discover, and win while exploring your style personality
           </p>
         </div>
@@ -121,13 +130,19 @@ const Games: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="bg-white rounded-2xl shadow-lg p-6 cursor-pointer border-2 border-transparent hover:border-purple-500"
+              className={`rounded-2xl shadow-lg p-6 cursor-pointer border-2 border-transparent hover:border-purple-500 transition-colors ${
+                isDarkMode ? 'bg-gray-800' : 'bg-white'
+              }`}
               onClick={() => setCurrentGame('mood-match')}
             >
               <div className="text-center">
                 <Target className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">MoodMatch</h3>
-                <p className="text-gray-600 mb-4">
+                <h3 className={`text-xl font-bold mb-2 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>MoodMatch</h3>
+                <p className={`mb-4 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>
                   Drag and drop moods to their perfect outfit matches
                 </p>
                 <div className="flex items-center justify-center space-x-2 text-sm text-purple-600">
@@ -139,13 +154,19 @@ const Games: React.FC = () => {
 
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="bg-white rounded-2xl shadow-lg p-6 cursor-pointer border-2 border-transparent hover:border-pink-500"
+              className={`rounded-2xl shadow-lg p-6 cursor-pointer border-2 border-transparent hover:border-pink-500 transition-colors ${
+                isDarkMode ? 'bg-gray-800' : 'bg-white'
+              }`}
               onClick={() => setCurrentGame('spin-vibe')}
             >
               <div className="text-center">
                 <RotateCcw className="h-12 w-12 text-pink-600 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Spin the Vibe</h3>
-                <p className="text-gray-600 mb-4">
+                <h3 className={`text-xl font-bold mb-2 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>Spin the Vibe</h3>
+                <p className={`mb-4 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>
                   Spin the wheel for discounts, styling tips, and surprises
                 </p>
                 <div className="flex items-center justify-center space-x-2 text-sm text-pink-600">
@@ -157,13 +178,19 @@ const Games: React.FC = () => {
 
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="bg-white rounded-2xl shadow-lg p-6 cursor-pointer border-2 border-transparent hover:border-teal-500"
+              className={`rounded-2xl shadow-lg p-6 cursor-pointer border-2 border-transparent hover:border-teal-500 transition-colors ${
+                isDarkMode ? 'bg-gray-800' : 'bg-white'
+              }`}
               onClick={() => setCurrentGame('mood-box')}
             >
               <div className="text-center">
                 <Gift className="h-12 w-12 text-teal-600 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">MoodBox</h3>
-                <p className="text-gray-600 mb-4">
+                <h3 className={`text-xl font-bold mb-2 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>MoodBox</h3>
+                <p className={`mb-4 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>
                   Mystery bundles curated for your vibe at special prices
                 </p>
                 <div className="flex items-center justify-center space-x-2 text-sm text-teal-600">
@@ -177,17 +204,27 @@ const Games: React.FC = () => {
 
         {/* MoodMatch Game */}
         {currentGame === 'mood-match' && (
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+          <div className={`rounded-2xl shadow-lg p-8 transition-colors ${
+            isDarkMode ? 'bg-gray-800' : 'bg-white'
+          }`}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">MoodMatch Challenge</h2>
+              <h2 className={`text-2xl font-bold ${
+                isDarkMode ? 'text-white' : 'text-gray-900'
+              }`}>MoodMatch Challenge</h2>
               <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2 bg-purple-100 px-3 py-1 rounded-full">
+                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${
+                  isDarkMode ? 'bg-gray-700' : 'bg-purple-100'
+                }`}>
                   <Star className="h-4 w-4 text-purple-600" />
-                  <span className="font-medium text-purple-900">{moodMatchScore} points</span>
+                  <span className={`font-medium ${
+                    isDarkMode ? 'text-purple-300' : 'text-purple-900'
+                  }`}>{moodMatchScore} points</span>
                 </div>
                 <button
                   onClick={() => setCurrentGame(null)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className={`${
+                    isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'
+                  }`}
                 >
                   Back to Games
                 </button>
@@ -197,7 +234,9 @@ const Games: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Moods */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Moods</h3>
+                <h3 className={`text-lg font-semibold mb-4 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>Moods</h3>
                 <div className="space-y-3">
                   {moods.map((mood) => (
                     <div
@@ -216,7 +255,9 @@ const Games: React.FC = () => {
 
               {/* Outfits */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Outfits</h3>
+                <h3 className={`text-lg font-semibold mb-4 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>Outfits</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {outfits.map((outfit) => (
                     <div
@@ -234,7 +275,9 @@ const Games: React.FC = () => {
                         alt={outfit.name}
                         className="w-full h-24 object-cover rounded mb-2"
                       />
-                      <p className="text-sm font-medium text-gray-900">{outfit.name}</p>
+                      <p className={`text-sm font-medium ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>{outfit.name}</p>
                     </div>
                   ))}
                 </div>
@@ -245,12 +288,18 @@ const Games: React.FC = () => {
 
         {/* Spin the Vibe Game */}
         {currentGame === 'spin-vibe' && (
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+          <div className={`rounded-2xl shadow-lg p-8 transition-colors ${
+            isDarkMode ? 'bg-gray-800' : 'bg-white'
+          }`}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Spin the Vibe</h2>
+              <h2 className={`text-2xl font-bold ${
+                isDarkMode ? 'text-white' : 'text-gray-900'
+              }`}>Spin the Vibe</h2>
               <button
                 onClick={() => setCurrentGame(null)}
-                className="text-gray-500 hover:text-gray-700"
+                className={`${
+                  isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
                 Back to Games
               </button>
@@ -258,7 +307,9 @@ const Games: React.FC = () => {
 
             <div className="text-center">
               <div className="relative w-64 h-64 mx-auto mb-8">
-                <div className={`w-full h-full rounded-full border-8 border-purple-200 ${isSpinning ? 'animate-spin' : ''}`}>
+                <div className={`w-full h-full rounded-full border-8 ${
+                  isDarkMode ? 'border-gray-600' : 'border-purple-200'
+                } ${isSpinning ? 'animate-spin' : ''}`}>
                   <div className="w-full h-full bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center">
                     <div className="text-white text-center">
                       <RotateCcw className="h-12 w-12 mx-auto mb-2" />
@@ -269,9 +320,13 @@ const Games: React.FC = () => {
               </div>
 
               {spinResult && (
-                <div className="mb-6 p-4 bg-green-100 rounded-lg">
-                  <h3 className="text-xl font-bold text-green-900 mb-2">🎉 You Won!</h3>
-                  <p className="text-green-800">{spinResult}</p>
+                <div className={`mb-6 p-4 rounded-lg ${
+                  isDarkMode ? 'bg-green-900' : 'bg-green-100'
+                }`}>
+                  <h3 className={`text-xl font-bold mb-2 ${
+                    isDarkMode ? 'text-green-100' : 'text-green-900'
+                  }`}>🎉 You Won!</h3>
+                  <p className={isDarkMode ? 'text-green-200' : 'text-green-800'}>{spinResult}</p>
                 </div>
               )}
 
@@ -288,12 +343,18 @@ const Games: React.FC = () => {
 
         {/* MoodBox Game */}
         {currentGame === 'mood-box' && (
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+          <div className={`rounded-2xl shadow-lg p-8 transition-colors ${
+            isDarkMode ? 'bg-gray-800' : 'bg-white'
+          }`}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">MoodBox Collection</h2>
+              <h2 className={`text-2xl font-bold ${
+                isDarkMode ? 'text-white' : 'text-gray-900'
+              }`}>MoodBox Collection</h2>
               <button
                 onClick={() => setCurrentGame(null)}
-                className="text-gray-500 hover:text-gray-700"
+                className={`${
+                  isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
                 Back to Games
               </button>
@@ -301,19 +362,29 @@ const Games: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {moodBoxes.map((box) => (
-                <div key={box.id} className="border rounded-2xl overflow-hidden hover:shadow-lg transition-shadow">
+                <div key={box.id} className={`border rounded-2xl overflow-hidden hover:shadow-lg transition-shadow ${
+                  isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200'
+                }`}>
                   <img
                     src={box.image}
                     alt={box.name}
                     className="w-full h-48 object-cover"
                   />
                   <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{box.name}</h3>
-                    <p className="text-gray-600 mb-4">{box.description}</p>
+                    <h3 className={`text-xl font-bold mb-2 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>{box.name}</h3>
+                    <p className={`mb-4 ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>{box.description}</p>
                     
                     <div className="mb-4">
-                      <p className="text-sm font-medium text-gray-900 mb-2">What's inside:</p>
-                      <ul className="text-sm text-gray-600 space-y-1">
+                      <p className={`text-sm font-medium mb-2 ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>What's inside:</p>
+                      <ul className={`text-sm space-y-1 ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
                         {box.items.map((item, index) => (
                           <li key={index}>• {item}</li>
                         ))}
@@ -323,9 +394,13 @@ const Games: React.FC = () => {
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <span className="text-2xl font-bold text-green-600">${box.price}</span>
-                        <span className="text-sm text-gray-500 line-through ml-2">${box.originalPrice}</span>
+                        <span className={`text-sm line-through ml-2 ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                        }`}>${box.originalPrice}</span>
                       </div>
-                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`px-2 py-1 rounded text-sm font-medium ${
+                        isDarkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800'
+                      }`}>
                         {Math.round((1 - box.price / box.originalPrice) * 100)}% OFF
                       </span>
                     </div>
@@ -342,10 +417,14 @@ const Games: React.FC = () => {
 
         {/* Leaderboard */}
         {!currentGame && (
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+          <div className={`rounded-2xl shadow-lg p-8 transition-colors ${
+            isDarkMode ? 'bg-gray-800' : 'bg-white'
+          }`}>
             <div className="flex items-center space-x-2 mb-6">
               <Crown className="h-6 w-6 text-yellow-600" />
-              <h2 className="text-2xl font-bold text-gray-900">Mood Masters Leaderboard</h2>
+              <h2 className={`text-2xl font-bold ${
+                isDarkMode ? 'text-white' : 'text-gray-900'
+              }`}>Mood Masters Leaderboard</h2>
             </div>
 
             <div className="space-y-3">
@@ -353,19 +432,31 @@ const Games: React.FC = () => {
                 <div
                   key={player.rank}
                   className={`flex items-center justify-between p-4 rounded-lg ${
-                    player.name === 'You' ? 'bg-purple-100 border-2 border-purple-500' : 'bg-gray-50'
+                    player.name === 'You' 
+                      ? isDarkMode 
+                        ? 'bg-purple-900 border-2 border-purple-500' 
+                        : 'bg-purple-100 border-2 border-purple-500'
+                      : isDarkMode 
+                        ? 'bg-gray-700' 
+                        : 'bg-gray-50'
                   }`}
                 >
                   <div className="flex items-center space-x-4">
-                    <span className="text-2xl font-bold text-gray-500">#{player.rank}</span>
                     <span className="text-2xl">{player.badge}</span>
-                    <span className={`font-medium ${player.name === 'You' ? 'text-purple-900' : 'text-gray-900'}`}>
-                      {player.name}
-                    </span>
+                    <div>
+                      <p className={`font-medium ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>{player.name}</p>
+                      <p className={`text-sm ${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                      }`}>Rank #{player.rank}</p>
+                    </div>
                   </div>
-                  <span className={`font-bold ${player.name === 'You' ? 'text-purple-600' : 'text-gray-600'}`}>
-                    {player.score.toLocaleString()} pts
-                  </span>
+                  <div className="text-right">
+                    <p className={`font-bold ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>{player.score} pts</p>
+                  </div>
                 </div>
               ))}
             </div>

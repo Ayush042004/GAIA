@@ -17,7 +17,25 @@ import {
   Heart
 } from 'lucide-react';
 import { ecoAchievements } from '../data/mockData';
-import { PieChart as RechartsPieChart, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, LineChart, Line } from 'recharts';
+import { 
+  PieChart as RechartsPieChart, 
+  Cell, 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  RadarChart, 
+  PolarGrid, 
+  PolarAngleAxis, 
+  PolarRadiusAxis, 
+  Radar, 
+  LineChart, 
+  Line,
+  ReferenceLine
+} from 'recharts';
 import LiveMoodDetector from '../components/mood/LiveMoodDetector';
 import MoodLeaderboard from '../components/mood/MoodLeaderboard';
 import SocialShare from '../components/social/SocialShare';
@@ -60,16 +78,60 @@ const Dashboard: React.FC = () => {
     { mood: 'Adventurous', amount: 150, orders: 4 }
   ];
 
+  // Enhanced eco impact data with more data points for smoother curves
   const ecoImpactOverTime = [
-    { month: 'Jan', trees: 8, carbon: 45, water: 200 },
-    { month: 'Feb', trees: 12, carbon: 67, water: 350 },
-    { month: 'Mar', trees: 15, carbon: 89, water: 420 },
-    { month: 'Apr', trees: 7, carbon: 79, water: 280 },
-    { month: 'May', trees: 18, carbon: 95, water: 480 },
-    { month: 'Jun', trees: 22, carbon: 120, water: 560 }
+    { month: 'Jan', trees: 8, carbon: 45, water: 200, day: 1 },
+    { month: 'Jan', trees: 10, carbon: 52, water: 230, day: 15 },
+    { month: 'Feb', trees: 12, carbon: 67, water: 350, day: 1 },
+    { month: 'Feb', trees: 14, carbon: 72, water: 380, day: 15 },
+    { month: 'Mar', trees: 15, carbon: 89, water: 420, day: 1 },
+    { month: 'Mar', trees: 16, carbon: 92, water: 440, day: 15 },
+    { month: 'Apr', trees: 7, carbon: 79, water: 280, day: 1 },
+    { month: 'Apr', trees: 9, carbon: 85, water: 320, day: 15 },
+    { month: 'May', trees: 18, carbon: 95, water: 480, day: 1 },
+    { month: 'May', trees: 20, carbon: 105, water: 520, day: 15 },
+    { month: 'Jun', trees: 22, carbon: 120, water: 560, day: 1 },
+    { month: 'Jun', trees: 25, carbon: 135, water: 600, day: 15 }
   ];
 
   const isDarkMode = user?.preferences?.darkMode || false;
+
+  // Custom tooltip component for smooth hover
+  const CustomTooltip = ({ active, payload, label, coordinate }: any) => {
+    if (active && payload && payload.length && coordinate) {
+      return (
+        <div 
+          className={`p-3 rounded-lg shadow-lg border ${
+            isDarkMode 
+              ? 'bg-gray-800 border-gray-600 text-white' 
+              : 'bg-white border-gray-200 text-gray-900'
+          }`}
+          style={{
+            position: 'absolute',
+            transform: 'translate(-50%, -100%)',
+            pointerEvents: 'none',
+            zIndex: 1000
+          }}
+        >
+          <p className="font-medium mb-2">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color }} className="text-sm">
+              {entry.name}: {entry.value}
+              {entry.dataKey === 'trees' && ' trees'}
+              {entry.dataKey === 'carbon' && 'kg CO₂'}
+              {entry.dataKey === 'water' && 'L'}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Custom dot component that's invisible but captures hover
+  const CustomDot = (props: any) => {
+    return <circle {...props} r={0} fill="transparent" />;
+  };
 
   if (!user) return null;
 
@@ -149,27 +211,128 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Eco Impact Over Time */}
+          {/* Enhanced Eco Impact Over Time with Smooth Hover */}
           <div className={`p-6 rounded-xl shadow-sm mb-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Eco Impact Over Time</h3>
-            <div className="h-64">
+            <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Eco Impact Over Time
+            </h3>
+            <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={ecoImpactOverTime}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#374151' : '#E5E7EB'} />
-                  <XAxis dataKey="month" stroke={isDarkMode ? '#9CA3AF' : '#6B7280'} />
-                  <YAxis stroke={isDarkMode ? '#9CA3AF' : '#6B7280'} />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF',
-                      border: `1px solid ${isDarkMode ? '#374151' : '#E5E7EB'}`,
-                      borderRadius: '8px'
-                    }}
+                <LineChart 
+                  data={ecoImpactOverTime}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                >
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    stroke={isDarkMode ? '#374151' : '#E5E7EB'} 
+                    opacity={0.3}
                   />
-                  <Line type="monotone" dataKey="trees" stroke="#10B981" strokeWidth={2} name="Trees" />
-                  <Line type="monotone" dataKey="carbon" stroke="#3B82F6" strokeWidth={2} name="CO₂ (kg)" />
-                  <Line type="monotone" dataKey="water" stroke="#06B6D4" strokeWidth={2} name="Water (L)" />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke={isDarkMode ? '#9CA3AF' : '#6B7280'}
+                    fontSize={12}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke={isDarkMode ? '#9CA3AF' : '#6B7280'}
+                    fontSize={12}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  
+                  {/* Custom Tooltip with smooth positioning */}
+                  <Tooltip 
+                    content={<CustomTooltip />}
+                    cursor={{
+                      stroke: isDarkMode ? '#6B7280' : '#9CA3AF',
+                      strokeWidth: 1,
+                      strokeDasharray: '3 3'
+                    }}
+                    position={{ x: 0, y: 0 }}
+                    allowEscapeViewBox={{ x: true, y: true }}
+                    animationDuration={0}
+                  />
+                  
+                  {/* Trees Line */}
+                  <Line 
+                    type="monotone" 
+                    dataKey="trees" 
+                    stroke="#10B981" 
+                    strokeWidth={3}
+                    name="Trees"
+                    dot={<CustomDot />}
+                    activeDot={{ 
+                      r: 6, 
+                      fill: '#10B981',
+                      stroke: '#ffffff',
+                      strokeWidth: 2,
+                      style: { filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }
+                    }}
+                    connectNulls={true}
+                    animationDuration={1500}
+                    animationEasing="ease-in-out"
+                  />
+                  
+                  {/* Carbon Line */}
+                  <Line 
+                    type="monotone" 
+                    dataKey="carbon" 
+                    stroke="#3B82F6" 
+                    strokeWidth={3}
+                    name="CO₂ Reduced"
+                    dot={<CustomDot />}
+                    activeDot={{ 
+                      r: 6, 
+                      fill: '#3B82F6',
+                      stroke: '#ffffff',
+                      strokeWidth: 2,
+                      style: { filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }
+                    }}
+                    connectNulls={true}
+                    animationDuration={1500}
+                    animationEasing="ease-in-out"
+                    animationBegin={200}
+                  />
+                  
+                  {/* Water Line */}
+                  <Line 
+                    type="monotone" 
+                    dataKey="water" 
+                    stroke="#06B6D4" 
+                    strokeWidth={3}
+                    name="Water Saved"
+                    dot={<CustomDot />}
+                    activeDot={{ 
+                      r: 6, 
+                      fill: '#06B6D4',
+                      stroke: '#ffffff',
+                      strokeWidth: 2,
+                      style: { filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }
+                    }}
+                    connectNulls={true}
+                    animationDuration={1500}
+                    animationEasing="ease-in-out"
+                    animationBegin={400}
+                  />
                 </LineChart>
               </ResponsiveContainer>
+            </div>
+            
+            {/* Legend */}
+            <div className="flex justify-center space-x-6 mt-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Trees Planted</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>CO₂ Reduced (kg)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-cyan-500 rounded-full"></div>
+                <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Water Saved (L)</span>
+              </div>
             </div>
           </div>
 

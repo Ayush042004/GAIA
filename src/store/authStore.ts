@@ -10,8 +10,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signup: (email: string, password: string, name: string, role: 'customer' | 'vendor') => Promise<void>;
-  updateUserPreferences: (preferences: Partial<User['preferences']>) => void;
-  toggleDarkMode: () => void;
+  updateUserPreferences: (preferences: Partial<User['preferences']>) => Promise<void>;
+  toggleDarkMode: () => Promise<void>;
   setCurrentMood: (mood: string) => void;
   initializeAuth: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -292,13 +292,44 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (error: any) {
       toast.error('Failed to update preferences');
+      throw error;
     }
   },
 
-  toggleDarkMode: () => {
+  toggleDarkMode: async () => {
     const user = get().user;
-    if (user?.preferences) {
-      get().updateUserPreferences({ dark_mode: !user.preferences.darkMode });
+    if (!user?.preferences) return;
+
+    const newDarkMode = !user.preferences.darkMode;
+    
+    // Add smooth transition class to body
+    document.body.classList.add('theme-transition');
+    
+    try {
+      await get().updateUserPreferences({ dark_mode: newDarkMode });
+      
+      // Apply theme immediately for smooth transition
+      if (newDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      
+      // Remove transition class after animation completes
+      setTimeout(() => {
+        document.body.classList.remove('theme-transition');
+      }, 300);
+      
+      toast.success(`Switched to ${newDarkMode ? 'dark' : 'light'} mode`);
+    } catch (error) {
+      // Revert on error
+      if (newDarkMode) {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+      document.body.classList.remove('theme-transition');
+      toast.error('Failed to update theme preference');
     }
   },
 
@@ -361,6 +392,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               }
             })
           };
+          
+          // Apply theme on initialization
+          if (userData.preferences?.darkMode) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
           
           set({ 
             user: userData, 

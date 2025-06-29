@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Cart from './Cart';
@@ -10,12 +10,23 @@ const Layout: React.FC = () => {
   const { user } = useAuthStore();
   const isDarkMode = user?.preferences?.darkMode || false;
 
+  // Apply theme class to document root
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
   return (
-    <div className={`min-h-screen transition-colors ${
-      isDarkMode ? 'bg-gray-900' : 'bg-gray-50'
+    <div className={`min-h-screen transition-all duration-300 ${
+      isDarkMode 
+        ? 'bg-gray-900 text-white' 
+        : 'bg-gray-50 text-gray-900'
     }`}>
       <Header />
-      <main>
+      <main className="transition-all duration-300">
         <Outlet />
       </main>
       <Cart />
@@ -27,6 +38,22 @@ const Layout: React.FC = () => {
           style: {
             background: isDarkMode ? '#1F2937' : '#363636',
             color: '#fff',
+            borderRadius: '12px',
+            padding: '16px',
+            fontSize: '14px',
+            fontWeight: '500',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10B981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: '#fff',
+            },
           },
         }}
       />

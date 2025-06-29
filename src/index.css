@@ -1,3 +1,136 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Dark mode transition styles */
+.theme-transition,
+.theme-transition *,
+.theme-transition *:before,
+.theme-transition *:after {
+  transition: background-color 0.3s ease-in-out, 
+              border-color 0.3s ease-in-out, 
+              color 0.3s ease-in-out,
+              box-shadow 0.3s ease-in-out !important;
+}
+
+/* Smooth transitions for all elements */
+* {
+  transition: background-color 0.2s ease-in-out, 
+              border-color 0.2s ease-in-out, 
+              color 0.2s ease-in-out;
+}
+
+/* Custom scrollbar for dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Dark mode root styles */
+:root {
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
+}
+
+/* Ensure smooth transitions for background gradients */
+.bg-gradient-to-br,
+.bg-gradient-to-r,
+.bg-gradient-to-l,
+.bg-gradient-to-t,
+.bg-gradient-to-b {
+  transition: background-image 0.3s ease-in-out;
+}
+
+/* Custom focus styles for dark mode */
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  @apply ring-purple-500 border-purple-500;
+}
+
+/* Smooth hover transitions */
+button, 
+.hover\:scale-105:hover,
+.hover\:scale-110:hover {
+  transition: transform 0.2s ease-in-out, 
+              background-color 0.2s ease-in-out,
+              color 0.2s ease-in-out,
+              box-shadow 0.2s ease-in-out;
+}
+
+/* Animation for theme toggle button */
+@keyframes theme-switch {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.theme-switch-animation {
+  animation: theme-switch 0.6s ease-in-out;
+}
+
+/* Pulse animation for theme indicators */
+@keyframes theme-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.theme-pulse {
+  animation: theme-pulse 2s ease-in-out infinite;
+}
+
+/* Smooth card transitions */
+.card-hover {
+  transition: transform 0.3s ease-out, 
+              box-shadow 0.3s ease-out,
+              background-color 0.3s ease-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+              0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dark .card-hover:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 
+              0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Loading spinner for theme transitions */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Smooth text color transitions */
+.text-transition {
+  transition: color 0.3s ease-in-out;
+}
+
+/* Enhanced focus styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2;
+}
+
+.dark .focus-ring {
+  @apply dark:focus:ring-offset-gray-800;
+}

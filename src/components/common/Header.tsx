@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingBag, User, Search, Menu, X, Leaf, Moon, Sun, Heart, Shirt, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
@@ -9,12 +9,14 @@ import AuthModal from '../auth/AuthModal';
 
 const Header: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, isAuthenticated, logout, toggleDarkMode } = useAuthStore();
   const { getTotalItems, toggleCart } = useCartStore();
   const { items: wishlistItems } = useWishlistStore();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isTogglingTheme, setIsTogglingTheme] = useState(false);
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -41,6 +43,51 @@ const Header: React.FC = () => {
     }
   };
 
+  const scrollToSearchBar = () => {
+    // Wait a moment for navigation to complete if needed
+    setTimeout(() => {
+      const searchInput = document.querySelector('[data-search-bar]') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        // Focus the input after scrolling
+        setTimeout(() => {
+          searchInput.focus();
+        }, 500);
+      }
+    }, 100);
+  };
+
+  const handleSearchClick = () => {
+    if (location.pathname !== '/') {
+      // Navigate to home page first, then scroll to search bar
+      navigate('/');
+      setTimeout(scrollToSearchBar, 300);
+    } else {
+      // Already on home page, just scroll to search bar
+      scrollToSearchBar();
+    }
+  };
+
+  const handleDarkModeToggle = async () => {
+    if (isTogglingTheme) return;
+    
+    setIsTogglingTheme(true);
+    
+    try {
+      await toggleDarkMode();
+    } catch (error) {
+      console.error('Failed to toggle dark mode:', error);
+    } finally {
+      // Reset the animation state after a delay
+      setTimeout(() => {
+        setIsTogglingTheme(false);
+      }, 600);
+    }
+  };
+
   const logoVariants = {
     animate: {
       rotate: [0, 360],
@@ -63,10 +110,30 @@ const Header: React.FC = () => {
     }
   };
 
+  const themeToggleVariants = {
+    initial: { scale: 1, rotate: 0 },
+    hover: { 
+      scale: 1.1,
+      transition: { duration: 0.2 }
+    },
+    tap: { 
+      scale: 0.9,
+      transition: { duration: 0.1 }
+    },
+    switching: {
+      rotate: 360,
+      scale: [1, 1.2, 1],
+      transition: {
+        duration: 0.6,
+        ease: "easeInOut"
+      }
+    }
+  };
+
   return (
     <motion.header 
-      className={`shadow-lg sticky top-0 z-50 transition-all duration-700 ${
-        isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
+      className={`shadow-lg sticky top-0 z-50 transition-all duration-300 ${
+        isDarkMode ? 'bg-gray-900 text-white border-b border-gray-800' : 'bg-white text-gray-900 border-b border-gray-200'
       }`}
       initial={{ y: -100 }}
       animate={{ y: 0 }}
@@ -106,8 +173,8 @@ const Header: React.FC = () => {
           <AnimatePresence>
             {user?.preferences?.currentMood && (
               <motion.div 
-                className={`hidden md:flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
-                  isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
+                className={`hidden md:flex items-center space-x-2 px-3 py-1 rounded-full text-sm transition-all duration-300 ${
+                  isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-100 border border-gray-200'
                 }`}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -163,22 +230,27 @@ const Header: React.FC = () => {
             {/* Dark Mode Toggle */}
             {isAuthenticated && (
               <motion.button
-                onClick={toggleDarkMode}
-                className={`p-2 rounded-lg transition-colors ${
+                onClick={handleDarkModeToggle}
+                disabled={isTogglingTheme}
+                className={`p-2 rounded-lg transition-all duration-300 ${
                   isDarkMode 
-                    ? 'text-yellow-400 hover:bg-gray-800' 
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-                whileHover={{ scale: 1.1, rotate: 180 }}
-                whileTap={{ scale: 0.9 }}
+                    ? 'text-yellow-400 hover:bg-gray-800 hover:text-yellow-300' 
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                } disabled:opacity-50`}
+                variants={themeToggleVariants}
+                initial="initial"
+                whileHover={!isTogglingTheme ? "hover" : undefined}
+                whileTap={!isTogglingTheme ? "tap" : undefined}
+                animate={isTogglingTheme ? "switching" : "initial"}
+                title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
               >
                 <AnimatePresence mode="wait">
                   {isDarkMode ? (
                     <motion.div
                       key="sun"
-                      initial={{ rotate: -180, opacity: 0 }}
-                      animate={{ rotate: 0, opacity: 1 }}
-                      exit={{ rotate: 180, opacity: 0 }}
+                      initial={{ rotate: -180, opacity: 0, scale: 0.5 }}
+                      animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                      exit={{ rotate: 180, opacity: 0, scale: 0.5 }}
                       transition={{ duration: 0.3 }}
                     >
                       <Sun className="h-5 w-5" />
@@ -186,9 +258,9 @@ const Header: React.FC = () => {
                   ) : (
                     <motion.div
                       key="moon"
-                      initial={{ rotate: -180, opacity: 0 }}
-                      animate={{ rotate: 0, opacity: 1 }}
-                      exit={{ rotate: 180, opacity: 0 }}
+                      initial={{ rotate: -180, opacity: 0, scale: 0.5 }}
+                      animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                      exit={{ rotate: 180, opacity: 0, scale: 0.5 }}
                       transition={{ duration: 0.3 }}
                     >
                       <Moon className="h-5 w-5" />
@@ -200,7 +272,9 @@ const Header: React.FC = () => {
 
             {/* Search Icon */}
             <motion.button 
-              className={`p-2 transition-colors ${
+              onClick={handleSearchClick}
+              title="Search products"
+              className={`p-2 transition-colors duration-300 ${
                 isDarkMode 
                   ? 'text-gray-300 hover:text-green-400' 
                   : 'text-gray-600 hover:text-green-600'
@@ -219,7 +293,7 @@ const Header: React.FC = () => {
               >
                 <Link
                   to="/wardrobe"
-                  className={`relative p-2 transition-colors ${
+                  className={`relative p-2 transition-colors duration-300 ${
                     isDarkMode 
                       ? 'text-gray-300 hover:text-green-400' 
                       : 'text-gray-600 hover:text-green-600'
@@ -238,7 +312,7 @@ const Header: React.FC = () => {
               >
                 <Link
                   to="/wishlist"
-                  className={`relative p-2 transition-colors ${
+                  className={`relative p-2 transition-colors duration-300 ${
                     isDarkMode 
                       ? 'text-gray-300 hover:text-green-400' 
                       : 'text-gray-600 hover:text-green-600'
@@ -265,7 +339,7 @@ const Header: React.FC = () => {
             {/* Cart */}
             <motion.button
               onClick={toggleCart}
-              className={`relative p-2 transition-colors ${
+              className={`relative p-2 transition-colors duration-300 ${
                 isDarkMode 
                   ? 'text-gray-300 hover:text-green-400' 
                   : 'text-gray-600 hover:text-green-600'
@@ -294,7 +368,7 @@ const Header: React.FC = () => {
               <div className="relative">
                 <motion.button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
+                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors duration-300 ${
                     isDarkMode 
                       ? 'text-gray-300 hover:bg-gray-800' 
                       : 'text-gray-700 hover:bg-gray-100'
@@ -314,21 +388,21 @@ const Header: React.FC = () => {
                       initial={{ opacity: 0, scale: 0.95, y: -10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg border ${
+                      className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg border transition-all duration-300 ${
                         isDarkMode 
                           ? 'bg-gray-800 border-gray-700' 
                           : 'bg-white border-gray-200'
                       }`}
                     >
                       <div className="py-1">
-                        <div className={`px-4 py-2 text-sm border-b ${
+                        <div className={`px-4 py-2 text-sm border-b transition-colors duration-300 ${
                           isDarkMode ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-600'
                         }`}>
                           {user?.email}
                         </div>
                         <button
                           onClick={handleLogout}
-                          className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center space-x-2 ${
+                          className={`w-full text-left px-4 py-2 text-sm transition-colors duration-300 flex items-center space-x-2 ${
                             isDarkMode 
                               ? 'text-gray-300 hover:bg-gray-700' 
                               : 'text-gray-700 hover:bg-gray-100'
@@ -345,7 +419,7 @@ const Header: React.FC = () => {
             ) : (
               <motion.button
                 onClick={() => setIsAuthModalOpen(true)}
-                className={`flex items-center space-x-1 transition-colors ${
+                className={`flex items-center space-x-1 transition-colors duration-300 ${
                   isDarkMode 
                     ? 'text-gray-300 hover:text-green-400' 
                     : 'text-gray-600 hover:text-green-600'
@@ -364,7 +438,9 @@ const Header: React.FC = () => {
             {/* Mobile menu button */}
             <motion.button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`md:hidden p-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
+              className={`md:hidden p-2 transition-colors duration-300 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+              }`}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
             >
@@ -399,14 +475,16 @@ const Header: React.FC = () => {
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
-              className="md:hidden pb-4"
+              className={`md:hidden pb-4 border-t transition-colors duration-300 ${
+                isDarkMode ? 'border-gray-700' : 'border-gray-200'
+              }`}
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
               <motion.div 
-                className="flex flex-col space-y-2"
+                className="flex flex-col space-y-2 pt-4"
                 variants={{
                   hidden: { opacity: 0 },
                   visible: {
@@ -430,9 +508,9 @@ const Header: React.FC = () => {
                     <Link
                       to={item.href}
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className={`block px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      className={`block px-3 py-2 text-sm font-medium rounded-md transition-colors duration-300 ${
                         location.pathname === item.href
-                          ? 'bg-green-100 text-green-600'
+                          ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400'
                           : isDarkMode
                             ? 'text-gray-300 hover:bg-gray-800'
                             : 'text-gray-700 hover:bg-gray-100'
@@ -452,7 +530,7 @@ const Header: React.FC = () => {
                   >
                     <button
                       onClick={handleLogout}
-                      className={`w-full text-left px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center space-x-2 ${
+                      className={`w-full text-left px-3 py-2 text-sm font-medium rounded-md transition-colors duration-300 flex items-center space-x-2 ${
                         isDarkMode
                           ? 'text-gray-300 hover:bg-gray-800'
                           : 'text-gray-700 hover:bg-gray-100'
