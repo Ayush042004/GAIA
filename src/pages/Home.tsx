@@ -204,6 +204,36 @@ const Home: React.FC = () => {
     <div className={`min-h-screen transition-all duration-700 ${
       isDarkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-purple-50 via-white to-green-50'
     }`}>
+            {/* Built on Bolt Badge - Fixed Position */}
+      <motion.div
+        className="fixed top-20 right-4 z-40"
+        initial={{ opacity: 0, x: 100 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 1, duration: 0.8 }}
+      >
+        <motion.a
+          href="https://bolt.new"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+          whileHover={{ scale: 1.05, y: -2 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-5 h-5 bg-white rounded-full flex items-center justify-center"
+          >
+            <Zap className="h-3 w-3 text-purple-600" />
+          </motion.div>
+          <span className="text-sm font-semibold">Built on Bolt</span>
+          <motion.div
+            className="w-2 h-2 bg-green-400 rounded-full"
+            animate={{ scale: [1, 1.5, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          />
+        </motion.a>
+      </motion.div>
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
